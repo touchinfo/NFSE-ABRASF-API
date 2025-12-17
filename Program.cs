@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NFSE_ABRASF.Repositories;
 using NFSE_ABRASF.Repositories.Interfaces;
@@ -8,6 +7,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using NFSE_ABRASF.Validators;
 using NFSE_ABRASF.Middleware;
+using NFSE_ABRASF.Extensions;
 using System.Text.Json.Serialization;
 using NFSE_ABRASF.Data.Context;
 
@@ -21,7 +21,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
-// Banco de Dados - Usa variável de ambiente ou appsettings
+// Banco de Dados
 var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING_2")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -35,7 +35,7 @@ if (string.IsNullOrEmpty(connectionString))
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-// Registra a senha do admin como configuração disponível via DI
+// Admin Password
 var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
 if (!string.IsNullOrEmpty(adminPassword))
 {
@@ -50,12 +50,16 @@ builder.Services.AddSingleton<IAdminAuthService, AdminAuthService>();
 // Repositories
 builder.Services.AddScoped<IEmpresaRepository, EmpresaRepository>();
 
+// ===== SERVIÇOS NFSe - ADICIONE ESTA LINHA =====
+builder.Services.AddNFSeServices();
+// ===============================================
+
 // FluentValidation
 builder.Services.AddFluentValidationAutoValidation()
                 .AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<CriarEmpresaDtoValidator>();
 
-// Data Protection
+// Data Protection (necessário para criptografia de senha do certificado)
 builder.Services.AddDataProtection();
 
 // CORS
@@ -77,18 +81,15 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "NFSE ABRASF API",
         Version = "v1",
-        Description = "API para gerenciamento de empresas e emissão de NFSe"
+        Description = "API para gerenciamento de empresas e emissão de NFSe - Padrão ABRASF"
     });
 });
 
 var app = builder.Build();
 
-// ===== MIDDLEWARES =====
-
-// Tratamento de erros
+// Middlewares
 app.UseErrorHandling();
 
-// Swagger - SEMPRE ATIVO (sem condicional)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -106,7 +107,7 @@ app.MapGet("/health", () => new { status = "Healthy", timestamp = DateTime.Now }
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
 Console.WriteLine("==============================================");
-Console.WriteLine("🚀 API INICIADA");
+Console.WriteLine("🚀 API NFSE ABRASF INICIADA");
 Console.WriteLine("==============================================");
 Console.WriteLine($"📄 Swagger: https://localhost:7064/swagger");
 Console.WriteLine($"📄 Swagger: http://localhost:5000/swagger");
@@ -114,6 +115,8 @@ Console.WriteLine($"🏥 Health: https://localhost:7064/health");
 Console.WriteLine("----------------------------------------------");
 Console.WriteLine($"🔌 DB conectada: {!string.IsNullOrEmpty(connectionString)}");
 Console.WriteLine($"🔑 Admin password configurada: {!string.IsNullOrEmpty(adminPassword)}");
+Console.WriteLine("==============================================");
+Console.WriteLine("📍 Municípios disponíveis: Santos/SP (GISS)");
 Console.WriteLine("==============================================");
 
 app.Run();
