@@ -1,0 +1,6 @@
+@NFSE_ABRASF_HostAddress = http://localhost:5189
+
+GET {{NFSE_ABRASF_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

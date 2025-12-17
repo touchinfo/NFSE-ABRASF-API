@@ -1,0 +1,30 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio
+.vs/
+*.rsuser
+*.cache
+
+## Secrets e configurações locais
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json
+
+## Certificados
+*.pfx
+*.p12
+*.cer
+
+## Logs
+logs/
+*.log
+
+## OS
+.DS_Store
+Thumbs.db
