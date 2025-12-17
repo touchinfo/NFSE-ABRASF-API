@@ -20,7 +20,21 @@ namespace NFSE_ABRASF.Controllers
         }
 
         /// <summary>
+        /// Obtém o ID da empresa autenticada via API Key
+        /// </summary>
+        private int GetEmpresaIdFromContext()
+        {
+            if (HttpContext.Items.TryGetValue("EmpresaId", out var empresaIdObj) && empresaIdObj is int empresaId)
+            {
+                return empresaId;
+            }
+
+            throw new UnauthorizedAccessException("Empresa não identificada. Verifique sua API Key.");
+        }
+
+        /// <summary>
         /// Lista todos os municípios disponíveis para emissão de NFSe
+        /// Rota pública - não requer autenticação
         /// </summary>
         [HttpGet("municipios")]
         [ProducesResponseType(typeof(IEnumerable<MunicipioInfo>), StatusCodes.Status200OK)]
@@ -32,17 +46,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Gera uma NFSe a partir de um único RPS
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="request">Dados do RPS</param>
-        [HttpPost("{empresaId:int}/gerar")]
+        [HttpPost("gerar")]
         [ProducesResponseType(typeof(GerarNfseResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<GerarNfseResponse>> GerarNfse(
-            int empresaId,
-            [FromBody] GerarNfseRequest request)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<GerarNfseResponse>> GerarNfse([FromBody] GerarNfseRequest request)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation("Requisição para gerar NFSe - Empresa: {EmpresaId}", empresaId);
 
             var response = await _nfseService.GerarNfseAsync(empresaId, request);
@@ -57,17 +71,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Envia um lote de RPS para processamento assíncrono
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="request">Dados do lote de RPS</param>
-        [HttpPost("{empresaId:int}/lote")]
+        [HttpPost("lote")]
         [ProducesResponseType(typeof(EnviarLoteRpsResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<EnviarLoteRpsResponse>> EnviarLoteRps(
-            int empresaId,
-            [FromBody] EnviarLoteRpsRequest request)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<EnviarLoteRpsResponse>> EnviarLoteRps([FromBody] EnviarLoteRpsRequest request)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation(
                 "Requisição para enviar lote RPS - Empresa: {EmpresaId}, Qtd RPS: {Quantidade}",
                 empresaId, request.QuantidadeRps);
@@ -84,17 +98,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Envia um lote de RPS para processamento síncrono (aguarda retorno)
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="request">Dados do lote de RPS</param>
-        [HttpPost("{empresaId:int}/lote/sincrono")]
+        [HttpPost("lote/sincrono")]
         [ProducesResponseType(typeof(EnviarLoteRpsSincronoResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<EnviarLoteRpsSincronoResponse>> EnviarLoteRpsSincrono(
-            int empresaId,
-            [FromBody] EnviarLoteRpsRequest request)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<EnviarLoteRpsSincronoResponse>> EnviarLoteRpsSincrono([FromBody] EnviarLoteRpsRequest request)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation(
                 "Requisição para enviar lote RPS síncrono - Empresa: {EmpresaId}, Qtd RPS: {Quantidade}",
                 empresaId, request.QuantidadeRps);
@@ -111,17 +125,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Consulta a situação de um lote de RPS pelo protocolo
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="protocolo">Protocolo do lote</param>
-        [HttpGet("{empresaId:int}/lote/{protocolo}/situacao")]
+        [HttpGet("lote/{protocolo}/situacao")]
         [ProducesResponseType(typeof(ConsultarSituacaoLoteRpsResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ConsultarSituacaoLoteRpsResponse>> ConsultarSituacaoLote(
-            int empresaId,
-            string protocolo)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<ConsultarSituacaoLoteRpsResponse>> ConsultarSituacaoLote(string protocolo)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation(
                 "Requisição para consultar situação do lote - Empresa: {EmpresaId}, Protocolo: {Protocolo}",
                 empresaId, protocolo);
@@ -133,17 +147,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Consulta as NFSes geradas de um lote pelo protocolo
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="protocolo">Protocolo do lote</param>
-        [HttpGet("{empresaId:int}/lote/{protocolo}")]
+        [HttpGet("lote/{protocolo}")]
         [ProducesResponseType(typeof(ConsultarLoteRpsResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ConsultarLoteRpsResponse>> ConsultarLoteRps(
-            int empresaId,
-            string protocolo)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<ConsultarLoteRpsResponse>> ConsultarLoteRps(string protocolo)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation(
                 "Requisição para consultar lote RPS - Empresa: {EmpresaId}, Protocolo: {Protocolo}",
                 empresaId, protocolo);
@@ -155,17 +169,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Consulta uma NFSe pelo número do RPS
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="request">Identificação do RPS</param>
-        [HttpPost("{empresaId:int}/consultar/rps")]
+        [HttpPost("consultar/rps")]
         [ProducesResponseType(typeof(ConsultarNfsePorRpsResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ConsultarNfsePorRpsResponse>> ConsultarNfsePorRps(
-            int empresaId,
-            [FromBody] ConsultarNfsePorRpsRequest request)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<ConsultarNfsePorRpsResponse>> ConsultarNfsePorRps([FromBody] ConsultarNfsePorRpsRequest request)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation(
                 "Requisição para consultar NFSe por RPS - Empresa: {EmpresaId}, RPS: {NumeroRps}",
                 empresaId, request.IdentificacaoRps.Numero);
@@ -182,17 +196,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Consulta NFSes por período, tomador ou número
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="request">Filtros da consulta</param>
-        [HttpPost("{empresaId:int}/consultar")]
+        [HttpPost("consultar")]
         [ProducesResponseType(typeof(ConsultarNfseResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ConsultarNfseResponse>> ConsultarNfse(
-            int empresaId,
-            [FromBody] ConsultarNfseRequest request)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<ConsultarNfseResponse>> ConsultarNfse([FromBody] ConsultarNfseRequest request)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation(
                 "Requisição para consultar NFSe - Empresa: {EmpresaId}",
                 empresaId);
@@ -204,17 +218,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Cancela uma NFSe
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="request">Dados do cancelamento</param>
-        [HttpPost("{empresaId:int}/cancelar")]
+        [HttpPost("cancelar")]
         [ProducesResponseType(typeof(CancelarNfseResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<CancelarNfseResponse>> CancelarNfse(
-            int empresaId,
-            [FromBody] CancelarNfseRequest request)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<CancelarNfseResponse>> CancelarNfse([FromBody] CancelarNfseRequest request)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation(
                 "Requisição para cancelar NFSe - Empresa: {EmpresaId}, NFSe: {NumeroNfse}",
                 empresaId, request.NumeroNfse);
@@ -231,17 +245,17 @@ namespace NFSE_ABRASF.Controllers
 
         /// <summary>
         /// Substitui uma NFSe (cancela a anterior e gera uma nova)
+        /// Requer autenticação via API Key (header X-Api-Key)
         /// </summary>
-        /// <param name="empresaId">ID da empresa emissora</param>
         /// <param name="request">Dados da substituição</param>
-        [HttpPost("{empresaId:int}/substituir")]
+        [HttpPost("substituir")]
         [ProducesResponseType(typeof(SubstituirNfseResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<SubstituirNfseResponse>> SubstituirNfse(
-            int empresaId,
-            [FromBody] SubstituirNfseRequest request)
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<SubstituirNfseResponse>> SubstituirNfse([FromBody] SubstituirNfseRequest request)
         {
+            var empresaId = GetEmpresaIdFromContext();
             _logger.LogInformation(
                 "Requisição para substituir NFSe - Empresa: {EmpresaId}, NFSe Original: {NumeroNfse}",
                 empresaId, request.NumeroNfseSubstituida);

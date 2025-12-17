@@ -4,9 +4,6 @@ namespace NFSE_ABRASF.DTOs.Requests
 {
     public class CriarEmpresaDto
     {
-        [Required(ErrorMessage = "A senha de administrador é obrigatória")]
-        public string? AdminPassword { get; set; }
-
         [Required(ErrorMessage = "O CNPJ é obrigatório")]
         [MaxLength(20)]
         public string? Cnpj { get; set; }

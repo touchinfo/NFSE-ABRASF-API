@@ -50,9 +50,8 @@ builder.Services.AddSingleton<IAdminAuthService, AdminAuthService>();
 // Repositories
 builder.Services.AddScoped<IEmpresaRepository, EmpresaRepository>();
 
-// ===== SERVIÇOS NFSe - ADICIONE ESTA LINHA =====
+// ===== SERVIÇOS NFSe =====
 builder.Services.AddNFSeServices();
-// ===============================================
 
 // FluentValidation
 builder.Services.AddFluentValidationAutoValidation()
@@ -81,15 +80,81 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "NFSE ABRASF API",
         Version = "v1",
-        Description = "API para gerenciamento de empresas e emissão de NFSe - Padrão ABRASF"
+        Description = @"API para gerenciamento de empresas e emissão de NFSe - Padrão ABRASF
+
+## Autenticação
+
+Esta API utiliza dois métodos de autenticação:
+
+### 1. Rotas de Empresas (`/v1/empresas/*`)
+- Use o header `X-Admin-Password` com a senha de administrador
+- Exemplo: `X-Admin-Password: sua-senha-admin`
+
+### 2. Rotas de NFSe (`/v1/nfse/*`)
+- Use o header `X-Api-Key` com a API Key da empresa
+- A API Key é gerada automaticamente ao criar uma empresa
+- Se a empresa estiver inativa, a API Key não funcionará
+- Exemplo: `X-Api-Key: sua-api-key`
+
+### Rota Pública
+- `GET /v1/nfse/municipios` - Lista municípios disponíveis (não requer autenticação)"
+    });
+
+    // Autenticação via API Key (para rotas de NFSe)
+    c.AddSecurityDefinition("ApiKey", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "API Key para rotas de NFSe. Obtida ao criar uma empresa.",
+        Name = "X-Api-Key",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "ApiKeyScheme"
+    });
+
+    // Autenticação via Admin Password (para rotas de Empresas)
+    c.AddSecurityDefinition("AdminPassword", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "Senha de administrador para rotas de gerenciamento de empresas.",
+        Name = "X-Admin-Password",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "AdminPasswordScheme"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            Array.Empty<string>()
+        },
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "AdminPassword"
+                }
+            },
+            Array.Empty<string>()
+        }
     });
 });
 
 var app = builder.Build();
 
-// Middlewares
+// ===== ORDEM DOS MIDDLEWARES É IMPORTANTE =====
+
+// 1. Tratamento de erros (primeiro para capturar exceções de todos os middlewares)
 app.UseErrorHandling();
 
+// 2. Swagger (antes da autenticação para ser acessível)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -97,9 +162,17 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
+// 3. HTTPS e CORS
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+
+// 4. Autenticação por API Key (protege rotas de NFSe)
+app.UseApiKeyAuth();
+
+// 5. Authorization padrão do ASP.NET
 app.UseAuthorization();
+
+// 6. Mapear controllers
 app.MapControllers();
 
 // Health e Redirect
@@ -115,6 +188,10 @@ Console.WriteLine($"🏥 Health: https://localhost:7064/health");
 Console.WriteLine("----------------------------------------------");
 Console.WriteLine($"🔌 DB conectada: {!string.IsNullOrEmpty(connectionString)}");
 Console.WriteLine($"🔑 Admin password configurada: {!string.IsNullOrEmpty(adminPassword)}");
+Console.WriteLine("==============================================");
+Console.WriteLine("🔐 AUTENTICAÇÃO:");
+Console.WriteLine("   - Rotas /v1/empresas/* → AdminPassword (no body)");
+Console.WriteLine("   - Rotas /v1/nfse/* → API Key (header X-Api-Key)");
 Console.WriteLine("==============================================");
 Console.WriteLine("📍 Municípios disponíveis: Santos/SP (GISS)");
 Console.WriteLine("==============================================");

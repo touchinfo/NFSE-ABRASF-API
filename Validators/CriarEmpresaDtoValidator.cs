@@ -8,9 +8,6 @@ namespace NFSE_ABRASF.Validators
     {
         public CriarEmpresaDtoValidator()
         {
-            RuleFor(x => x.AdminPassword)
-                .NotEmpty().WithMessage("A senha de administrador é obrigatória");
-
             RuleFor(x => x.Cnpj)
                 .NotEmpty().WithMessage("O CNPJ é obrigatório")
                 .MaximumLength(20).WithMessage("O CNPJ deve ter no máximo 20 caracteres")

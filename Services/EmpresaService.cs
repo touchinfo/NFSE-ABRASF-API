@@ -149,6 +149,29 @@ namespace NFSE_ABRASF.Services
             return await _repository.CnpjExisteAsync(cnpj);
         }
 
+        public async Task<bool> AlterarStatusAsync(int id, bool ativa)
+        {
+            var empresa = await _repository.ObterPorIdAsync(id);
+
+            if (empresa == null)
+            {
+                throw new NotFoundException("Empresa", id);
+            }
+
+            empresa.Ativa = ativa;
+            empresa.updated_At = DateTime.Now;
+
+            var resultado = await _repository.AtualizarAsync(empresa);
+
+            if (resultado)
+            {
+                _logger.LogInformation("Status da empresa {EmpresaId} alterado para {Status}",
+                    id, ativa ? "Ativa" : "Inativa");
+            }
+
+            return resultado;
+        }
+
         private static EmpresaResponseDto MapToResponseDto(Empresas empresa)
         {
             return new EmpresaResponseDto

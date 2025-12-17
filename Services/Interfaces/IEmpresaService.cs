@@ -1,6 +1,5 @@
 ﻿using NFSE_ABRASF.DTOs.Requests;
 using NFSE_ABRASF.DTOs.Responses;
-using NFSE_ABRASF.Models;
 
 namespace NFSE_ABRASF.Services.Interfaces
 {
@@ -12,5 +11,6 @@ namespace NFSE_ABRASF.Services.Interfaces
         Task<bool> AtualizarAsync(int id, CriarEmpresaDto dto);
         Task<bool> DeletarAsync(int id);
         Task<bool> CnpjJaExisteAsync(string cnpj);
+        Task<bool> AlterarStatusAsync(int id, bool ativa);
     }
 }
