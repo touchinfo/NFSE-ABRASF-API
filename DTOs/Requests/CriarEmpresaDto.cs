@@ -39,9 +39,6 @@ namespace NFSE_ABRASF.DTOs.Requests
         [MaxLength(2)]
         public string? UF { get; set; }
 
-        [MaxLength(1)]
-        public string? Tipo_Ambiente { get; set; }
-
         public IFormFile? CertificadoArquivo { get; set; }
 
         [MaxLength(255)]

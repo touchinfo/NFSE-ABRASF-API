@@ -86,7 +86,7 @@ namespace NFSE_ABRASF.Services
                 Complemento = dto.Complemento,
                 Bairro = dto.Bairro,
                 UF = dto.UF,
-                Tipo_Ambiente = dto.Tipo_Ambiente,
+                Tipo_Ambiente = "2", // Sempre inicia em Homologação por segurança
                 Certificado_Pfx = certInfo?.Bytes,
                 Senha_Certificado = senhaCriptografada,
                 Certificado_Validade = certInfo?.Validade,
@@ -134,7 +134,7 @@ namespace NFSE_ABRASF.Services
             empresa.Complemento = dto.Complemento;
             empresa.Bairro = dto.Bairro;
             empresa.UF = dto.UF;
-            empresa.Tipo_Ambiente = dto.Tipo_Ambiente;
+            // Tipo_Ambiente não é editável via API - sempre controlado internamente
 
             return await _repository.AtualizarAsync(empresa);
         }
@@ -167,6 +167,35 @@ namespace NFSE_ABRASF.Services
             {
                 _logger.LogInformation("Status da empresa {EmpresaId} alterado para {Status}",
                     id, ativa ? "Ativa" : "Inativa");
+            }
+
+            return resultado;
+        }
+
+        public async Task<bool> AlterarAmbienteAsync(int id, string tipoAmbiente)
+        {
+            if (tipoAmbiente != "1" && tipoAmbiente != "2")
+            {
+                throw new BusinessException("Tipo de ambiente inválido. Use '1' para Produção ou '2' para Homologação.");
+            }
+
+            var empresa = await _repository.ObterPorIdAsync(id);
+
+            if (empresa == null)
+            {
+                throw new NotFoundException("Empresa", id);
+            }
+
+            empresa.Tipo_Ambiente = tipoAmbiente;
+            empresa.updated_At = DateTime.Now;
+
+            var resultado = await _repository.AtualizarAsync(empresa);
+
+            if (resultado)
+            {
+                var nomeAmbiente = tipoAmbiente == "1" ? "Produção" : "Homologação";
+                _logger.LogInformation("Ambiente da empresa {EmpresaId} alterado para {Ambiente}",
+                    id, nomeAmbiente);
             }
 
             return resultado;

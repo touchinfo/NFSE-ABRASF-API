@@ -1,0 +1,43 @@
+name: Deploy ASP.NET 8 API-ABRASF no Windows Server
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout do Código
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Build e Publish
+      run: |
+        dotnet restore
+        dotnet publish -c Release -o ./publish
+
+    - name: Deploy no IIS
+      shell: powershell
+      run: |
+        Import-Module IISAdministration
+        
+        $siteName = "API-ABRASF"
+        $destino = "C:\inetpub\wwwroot\API-ABRASF"
+        
+        # Para o site no IIS
+        Stop-IISSite -Name $siteName -Confirm:$false
+        
+        # Aguarda um momento para liberar arquivos
+        Start-Sleep -Seconds 2
+        
+        # Copia os arquivos para a pasta do IIS
+        Copy-Item -Path "./publish/*" -Destination $destino -Recurse -Force
+        
+        # Reinicia o site
+        Start-IISSite -Name $siteName

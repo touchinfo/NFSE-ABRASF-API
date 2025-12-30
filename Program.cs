@@ -10,6 +10,7 @@ using NFSE_ABRASF.Middleware;
 using NFSE_ABRASF.Extensions;
 using System.Text.Json.Serialization;
 using NFSE_ABRASF.Data.Context;
+using NFSE_ABRASF.Services.NFSe;
 
 var builder = WebApplication.CreateBuilder(args);
 

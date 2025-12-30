@@ -12,5 +12,6 @@ namespace NFSE_ABRASF.Services.Interfaces
         Task<bool> DeletarAsync(int id);
         Task<bool> CnpjJaExisteAsync(string cnpj);
         Task<bool> AlterarStatusAsync(int id, bool ativa);
+        Task<bool> AlterarAmbienteAsync(int id, string tipoAmbiente);
     }
 }

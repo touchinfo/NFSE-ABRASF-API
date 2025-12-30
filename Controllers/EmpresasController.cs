@@ -193,5 +193,42 @@ namespace NFSE_ABRASF.Controllers
                 ativa = ativa
             });
         }
+
+        /// <summary>
+        /// Altera o ambiente da empresa (Produção ou Homologação)
+        /// Requer header X-Admin-Password
+        /// </summary>
+        /// <param name="id">ID da empresa</param>
+        /// <param name="adminPassword">Senha de administrador</param>
+        /// <param name="ambiente">1 = Produção, 2 = Homologação</param>
+        [HttpPatch("{id:int}/ambiente")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AlterarAmbiente(
+            int id,
+            [FromHeader(Name = "X-Admin-Password")] string? adminPassword,
+            [FromQuery] string ambiente)
+        {
+            var authResult = ValidarAdminPassword(adminPassword, "alterar ambiente empresa");
+            if (authResult != null) return authResult;
+
+            var sucesso = await _empresaService.AlterarAmbienteAsync(id, ambiente);
+
+            if (!sucesso)
+                return NotFound(new { message = $"Empresa com ID {id} não encontrada." });
+
+            var nomeAmbiente = ambiente == "1" ? "Produção" : "Homologação";
+            _logger.LogInformation("Ambiente da empresa {EmpresaId} alterado para {Ambiente}", id, nomeAmbiente);
+
+            return Ok(new
+            {
+                message = $"Ambiente alterado para {nomeAmbiente} com sucesso.",
+                empresaId = id,
+                ambiente = ambiente,
+                descricaoAmbiente = nomeAmbiente
+            });
+        }
     }
 }

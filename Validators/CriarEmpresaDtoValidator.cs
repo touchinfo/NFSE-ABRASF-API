@@ -38,12 +38,6 @@ namespace NFSE_ABRASF.Validators
                 .When(x => !string.IsNullOrEmpty(x.UF))
                 .WithMessage("UF inválida. Use 2 letras maiúsculas (ex: RJ)");
 
-            RuleFor(x => x.Tipo_Ambiente)
-                .MaximumLength(1).WithMessage("O Tipo de Ambiente deve ter 1 caractere")
-                .Must(x => x == "1" || x == "2")
-                .When(x => !string.IsNullOrEmpty(x.Tipo_Ambiente))
-                .WithMessage("Tipo de Ambiente deve ser 1 (Produção) ou 2 (Homologação)");
-
             RuleFor(x => x.Senha_Certificado)
                 .NotEmpty()
                 .When(x => x.CertificadoArquivo != null && x.CertificadoArquivo.Length > 0)
