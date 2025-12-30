@@ -17,29 +17,52 @@ jobs:
       with:
         dotnet-version: '8.0.x'
       env:
+        # Resolve o erro de permissão na instalação do SDK
         DOTNET_INSTALL_DIR: 'C:\actions-runner\dotnet'
 
     - name: Build e Publish
       run: |
         dotnet restore
-        dotnet publish -c Release -o ./publish
+        # O output vai para uma pasta temporária dentro do workspace do runner
+        dotnet publish -c Release -o ./publish_output
 
-    - name: Deploy no IIS
+    - name: Deploy no IIS (PowerShell)
       shell: powershell
       run: |
-        Import-Module IISAdministration
-        
         $siteName = "API-ABRASF"
-        $destino = "C:\inetpub\wwwroot\API-ABRASF"
+        $appPoolName = "API-ABRASF"
+        $destinoFinal = "C:\inetpub\wwwroot\API-ABRASF"
+        $origemPublish = "./publish_output"
+
+        Import-Module WebAdministration
+
+        # 1. Garante que a pasta de destino existe
+        if (!(Test-Path $destinoFinal)) { 
+            New-Item -Path $destinoFinal -ItemType Directory -Force 
+        }
+
+        # 2. Destrava os arquivos DLL criando o app_offline.htm
+        # Isso faz o IIS parar de segurar os arquivos para o Copy-Item não falhar
+        New-Item -Path "$destinoFinal\app_offline.htm" -ItemType File -Force
+        Write-Host "Aguardando 5 segundos para o IIS liberar os arquivos..."
+        Start-Sleep -Seconds 5
+
+        # 3. Para o Application Pool para garantir limpeza total
+        if ((Get-WebAppPoolState $appPoolName).Value -ne "Stopped") {
+            Stop-WebAppPool -Name $appPoolName
+            Start-Sleep -Seconds 2
+        }
+
+        # 4. Copia os arquivos da pasta de publish para a pasta do IIS
+        Write-Host "Copiando arquivos para $destinoFinal..."
+        Copy-Item -Path "$origemPublish\*" -Destination $destinoFinal -Recurse -Force
+
+        # 5. Remove o app_offline e reinicia o serviço
+        if (Test-Path "$destinoFinal\app_offline.htm") {
+            Remove-Item -Path "$destinoFinal\app_offline.htm" -Force
+        }
+
+        Start-WebAppPool -Name $appPoolName
+        Start-WebSite -Name $siteName
         
-        # Para o site no IIS
-        Stop-IISSite -Name $siteName -Confirm:$false
-        
-        # Aguarda um momento para liberar arquivos
-        Start-Sleep -Seconds 2
-        
-        # Copia os arquivos para a pasta do IIS
-        Copy-Item -Path "./publish/*" -Destination $destino -Recurse -Force
-        
-        # Reinicia o site
-        Start-IISSite -Name $siteName
+        Write-Host "Deploy finalizado com sucesso!"
