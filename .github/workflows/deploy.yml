@@ -25,44 +25,43 @@ jobs:
         dotnet restore
         # O output vai para uma pasta temporária dentro do workspace do runner
         dotnet publish -c Release -o ./publish_output
-
-    - name: Deploy no IIS (PowerShell)
+    - name: Deploy no IIS
       shell: powershell
       run: |
-        $siteName = "API-ABRASF"
-        $appPoolName = "API-ABRASF"
-        $destinoFinal = "C:\inetpub\wwwroot\API-ABRASF"
-        $origemPublish = "./publish_output"
+        # Configuração de Nomes
+        $dest = "C:\inetpub\wwwroot\NFSE-API" # Certifique-se que esta pasta existe no servidor
+        $name = "NFSE-ABRASF-API"             # Nome exato do Site e do Pool
 
-        Import-Module WebAdministration
-
-        # 1. Garante que a pasta de destino existe
-        if (!(Test-Path $destinoFinal)) { 
-            New-Item -Path $destinoFinal -ItemType Directory -Force 
-        }
-
-        # 2. Destrava os arquivos DLL criando o app_offline.htm
-        # Isso faz o IIS parar de segurar os arquivos para o Copy-Item não falhar
-        New-Item -Path "$destinoFinal\app_offline.htm" -ItemType File -Force
-        Write-Host "Aguardando 5 segundos para o IIS liberar os arquivos..."
+        # 1. Preparação: Cria app_offline para liberar arquivos travados
+        if (!(Test-Path $dest)) { New-Item -Path $dest -ItemType Directory -Force }
+        New-Item -Path "$dest\app_offline.htm" -ItemType File -Force
+        Write-Host "Aguardando o IIS liberar os arquivos da API..."
         Start-Sleep -Seconds 5
 
-        # 3. Para o Application Pool para garantir limpeza total
-        if ((Get-WebAppPoolState $appPoolName).Value -ne "Stopped") {
-            Stop-WebAppPool -Name $appPoolName
+        # 2. Gerenciamento do IIS (Importa módulo e para o Pool)
+        Import-Module WebAdministration
+        try {
+            Write-Host "Parando o Application Pool e o Site..."
+            Stop-WebAppPool -Name $name
+            Stop-IISSite -Name $name
             Start-Sleep -Seconds 2
+        } catch {
+            Write-Warning "Aviso: Não foi possível parar o Pool ou Site. Verifique se os nomes estão corretos no IIS."
         }
 
-        # 4. Copia os arquivos da pasta de publish para a pasta do IIS
-        Write-Host "Copiando arquivos para $destinoFinal..."
-        Copy-Item -Path "$origemPublish\*" -Destination $destinoFinal -Recurse -Force
+        # 3. Deploy: Copia os binários novos do .NET 8
+        Write-Host "Copiando novos arquivos para $dest..."
+        Copy-Item -Path "./publish/*" -Destination $dest -Recurse -Force
 
-        # 5. Remove o app_offline e reinicia o serviço
-        if (Test-Path "$destinoFinal\app_offline.htm") {
-            Remove-Item -Path "$destinoFinal\app_offline.htm" -Force
-        }
-
-        Start-WebAppPool -Name $appPoolName
-        Start-WebSite -Name $siteName
+        # 4. Finalização: Remove trava e reinicia a API
+        if (Test-Path "$dest\app_offline.htm") { Remove-Item -Path "$dest\app_offline.htm" -Force }
         
-        Write-Host "Deploy finalizado com sucesso!"
+        try {
+            Write-Host "Reiniciando a API..."
+            Start-WebAppPool -Name $name
+            Start-IISSite -Name $name
+            Write-Host "Deploy finalizado com sucesso!"
+        } catch {
+            Write-Error "Erro ao reiniciar a API no IIS."
+            exit 1
+        }
