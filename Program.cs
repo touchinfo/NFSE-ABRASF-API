@@ -54,6 +54,9 @@ builder.Services.AddScoped<IEmpresaRepository, EmpresaRepository>();
 // ===== SERVIÇOS NFSe =====
 builder.Services.AddNFSeServices();
 
+// Serviço para processamento de XML direto
+builder.Services.AddScoped<NFSE_ABRASF.Services.NFSe.INFSeXmlDirectService, NFSE_ABRASF.Services.NFSe.NFSeXmlDirectService>();
+
 // FluentValidation
 builder.Services.AddFluentValidationAutoValidation()
                 .AddFluentValidationClientsideAdapters();
