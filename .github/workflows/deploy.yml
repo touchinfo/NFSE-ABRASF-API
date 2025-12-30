@@ -32,30 +32,87 @@ jobs:
         $siteName = "API-ABRASF"
         $poolName = "API-ABRASF"
         
-        Write-Host "Iniciando deploy..."
+        Write-Host "=== Iniciando Deploy ==="
         
+        # Criar diretórios se não existirem
         if (!(Test-Path $dest)) { 
             New-Item -Path $dest -ItemType Directory -Force 
+            Write-Host "Pasta criada: $dest"
         }
         
         if (!(Test-Path "$dest\logs")) {
             New-Item -Path "$dest\logs" -ItemType Directory -Force
         }
         
+        # App offline para liberar arquivos
         New-Item -Path "$dest\app_offline.htm" -ItemType File -Force | Out-Null
+        Write-Host "App offline criado"
         Start-Sleep -Seconds 5
         
         Import-Module WebAdministration
         
-        Stop-WebAppPool -Name $poolName -ErrorAction SilentlyContinue
-        Stop-IISSite -Name $siteName -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 3
+        # Parar Application Pool (se existir)
+        try {
+            $pool = Get-WebAppPoolState -Name $poolName -ErrorAction SilentlyContinue
+            if ($pool) {
+                Write-Host "Parando Application Pool: $poolName"
+                Stop-WebAppPool -Name $poolName
+                Start-Sleep -Seconds 2
+            } else {
+                Write-Host "Application Pool não existe, será criado no primeiro deploy"
+            }
+        } catch {
+            Write-Host "Application Pool não encontrado ou já parado"
+        }
         
+        # Parar Site (se existir)
+        try {
+            $site = Get-Website -Name $siteName -ErrorAction SilentlyContinue
+            if ($site) {
+                Write-Host "Parando Site: $siteName"
+                Stop-Website -Name $siteName
+                Start-Sleep -Seconds 2
+            } else {
+                Write-Host "Site não existe ainda"
+            }
+        } catch {
+            Write-Host "Site não encontrado ou já parado"
+        }
+        
+        # Copiar arquivos
+        Write-Host "Copiando arquivos compilados..."
         Copy-Item -Path "./publish_output/*" -Destination $dest -Recurse -Force
+        Write-Host "Arquivos copiados!"
         
+        # Remover app_offline
         Remove-Item -Path "$dest\app_offline.htm" -Force -ErrorAction SilentlyContinue
         
-        Start-WebAppPool -Name $poolName
-        Start-IISSite -Name $siteName
+        # Iniciar Application Pool (se existir)
+        try {
+            $pool = Get-WebAppPoolState -Name $poolName -ErrorAction SilentlyContinue
+            if ($pool) {
+                Write-Host "Iniciando Application Pool: $poolName"
+                Start-WebAppPool -Name $poolName
+            }
+        } catch {
+            Write-Warning "Não foi possível iniciar o Application Pool"
+        }
         
-        Write-Host "Deploy concluido!"
+        # Iniciar Site (se existir)
+        try {
+            $site = Get-Website -Name $siteName -ErrorAction SilentlyContinue
+            if ($site) {
+                Write-Host "Iniciando Site: $siteName"
+                Start-Website -Name $siteName
+            }
+        } catch {
+            Write-Warning "Não foi possível iniciar o Site"
+        }
+        
+        Write-Host "=== Deploy Concluído ==="
+        Write-Host "Arquivos copiados para: $dest"
+        
+        if (!(Get-Website -Name $siteName -ErrorAction SilentlyContinue)) {
+            Write-Warning "⚠️ ATENÇÃO: O site '$siteName' não existe no IIS!"
+            Write-Warning "Execute o script de criação do site antes de usar a API"
+        }
