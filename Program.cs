@@ -79,7 +79,7 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Title = "NFSE ABRASF API",
+        Title = "NFSE ABRASF API 1.0",
         Version = "v1",
         Description = @"API para gerenciamento de empresas e emissão de NFSe - Padrão ABRASF
 
