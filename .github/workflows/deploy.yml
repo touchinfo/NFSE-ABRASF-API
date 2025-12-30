@@ -28,64 +28,34 @@ jobs:
     - name: Deploy no IIS
       shell: powershell
       run: |
-        # ===== CONFIGURAÇÕES =====
-        $dest = "C:\inetpub\wwwroot\API-ABRASF"  # Pasta final dos binários
-        $siteName = "API-ABRASF"                  # Nome do Site no IIS
-        $poolName = "API-ABRASF"                  # Nome do Application Pool
+        $dest = "C:\inetpub\wwwroot\API-ABRASF"
+        $siteName = "API-ABRASF"
+        $poolName = "API-ABRASF"
         
-        # ===== PREPARAÇÃO =====
-        Write-Host "Iniciando deploy para $dest..."
+        Write-Host "Iniciando deploy..."
         
-        # Cria a pasta se não existir
         if (!(Test-Path $dest)) { 
             New-Item -Path $dest -ItemType Directory -Force 
-            Write-Host "Pasta criada: $dest"
         }
         
-        # Cria app_offline.htm para liberar arquivos travados pelo IIS
+        if (!(Test-Path "$dest\logs")) {
+            New-Item -Path "$dest\logs" -ItemType Directory -Force
+        }
+        
         New-Item -Path "$dest\app_offline.htm" -ItemType File -Force | Out-Null
-        Write-Host "App offline criado. Aguardando IIS liberar arquivos..."
         Start-Sleep -Seconds 5
         
-        # ===== PARAR IIS =====
         Import-Module WebAdministration
         
-        try {
-            Write-Host "Parando Application Pool: $poolName"
-            Stop-WebAppPool -Name $poolName -ErrorAction SilentlyContinue
-            
-            Write-Host "Parando Site: $siteName"
-            Stop-IISSite -Name $siteName -ErrorAction SilentlyContinue
-            
-            Start-Sleep -Seconds 3
-        } catch {
-            Write-Warning "Não foi possível parar o Pool/Site. Continuando deploy..."
-        }
+        Stop-WebAppPool -Name $poolName -ErrorAction SilentlyContinue
+        Stop-IISSite -Name $siteName -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 3
         
-        # ===== DEPLOY DOS BINÁRIOS =====
-        Write-Host "Copiando arquivos compilados de ./publish_output para $dest..."
-        
-        # CORREÇÃO: Caminho correto é publish_output, não publish
         Copy-Item -Path "./publish_output/*" -Destination $dest -Recurse -Force
         
-        Write-Host "Arquivos copiados com sucesso!"
+        Remove-Item -Path "$dest\app_offline.htm" -Force -ErrorAction SilentlyContinue
         
-        # ===== REMOVER APP_OFFLINE =====
-        if (Test-Path "$dest\app_offline.htm") { 
-            Remove-Item -Path "$dest\app_offline.htm" -Force 
-        }
+        Start-WebAppPool -Name $poolName
+        Start-IISSite -Name $siteName
         
-        # ===== REINICIAR IIS =====
-        try {
-            Write-Host "Iniciando Application Pool: $poolName"
-            Start-WebAppPool -Name $poolName
-            
-            Write-Host "Iniciando Site: $siteName"
-            Start-IISSite -Name $siteName
-            
-            Write-Host "✅ Deploy finalizado com sucesso!"
-            Write-Host "API disponível em: http://localhost (conforme configuração do IIS)"
-        } catch {
-            Write-Error "❌ Erro ao reiniciar a API no IIS."
-            exit 1
-        }
+        Write-Host "Deploy concluido!"
